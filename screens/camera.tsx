@@ -1,32 +1,42 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, Button, StyleSheet, Image, Pressable, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
-import { CameraFullScreen } from '../lib/cameraFullScreen';
 
 import close from '../assets/icons/close.png';
 import circle from '../assets/icons/circle.png';
 import repeat from '../assets/icons/repeat.png';
+import { Dialog, DialogContent, DialogTitle, DialogActions } from '../components/Dialog';
+import LoadingScreen from '../components/LoadingScreen';
+
+import { decodeJpeg } from '@tensorflow/tfjs-react-native'
+import * as tensorflow from '@tensorflow/tfjs';
+import * as mobilenet from '@tensorflow-models/mobilenet';
+import * as FileSystem from 'expo-file-system';
 
 const CameraScreen = ({ navigation }: any) => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
   const [type, setType] = useState(CameraType.back);
   const cameraRef = useRef<Camera | null>(null);
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  
+
   const [isCameraRunning, setIsCameraRunning] = useState<boolean>(true);
-  const [showCameraError, setShowCameraError] = useState<boolean>(false);
 
   const { cameraStyle, contentStyle } = useFullScreenCameraStyle();
 
-  const handleCameraError = () => {
-    setIsCameraRunning(false);
-    setShowCameraError(true);
-  };
-
+  // let tflite = new Tflite();
   // Request camera permissions
   const getPermissions = async () => {
-    if (!hasPermission) {
-      const { status } = await Camera.getCameraPermissionsAsync();
+    setLoading(true);
+    await Camera.requestCameraPermissionsAsync();
+
+    const { status } = await Camera.getCameraPermissionsAsync();
+
+    setLoading(false);
+    if (status === 'denied') {
+      await Camera.requestCameraPermissionsAsync();
+    } else if (status === 'granted') {
       setHasPermission(status === 'granted');
     }
   };
@@ -40,17 +50,47 @@ const CameraScreen = ({ navigation }: any) => {
     );
   };
 
-  // Take a photo and display it
-  const takePhoto = async () => {
+  async function ImageClassification(imageUri: string) {
+    await tensorflow.ready();
+    const model = await mobilenet.load();
+  
+    const imageBase64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64
+    });
+  
+    const imageBuffer = tensorflow.util.encodeString(imageBase64, 'base64').buffer;
+    const raw = new Uint8Array(imageBuffer);
+  
+    const imageTensor = decodeJpeg(raw);
+  
+    const classificationResult = await model.classify(imageTensor);
+    console.log(classificationResult);
+  };
+
+  // Take a photo and process it with TensorFlow Lite
+  const takePhotoAndProcess = async () => {
     if (cameraRef.current) {
       const photo = await cameraRef.current.takePictureAsync();
-      setPhotoUri(photo.uri);
+      const imageUri = photo.uri;
+
+      try {
+        await ImageClassification(imageUri);
+
+        // Navigate to the ResultScreen with the processed result
+        // navigation.navigate('ResultScreen', { predictions: outputTensor });
+      } catch (error) {
+        console.error('Error running inference with TFLite:', error);
+      }
+
+      setLoading(false);
     }
   };
 
   React.useEffect(() => {
     getPermissions();
   }, []);
+
+  if (loading) return <LoadingScreen />
 
   return (
     <View style={styles.container}>
@@ -64,10 +104,10 @@ const CameraScreen = ({ navigation }: any) => {
           />
         </View>
       ) : (
-        <Camera 
+        <Camera
           style={[styles.cover, cameraStyle]}
           onCameraReady={() => setIsCameraRunning(true)}
-          onMountError={handleCameraError}
+          onMountError={() => { setIsCameraRunning(false) }}
           type={type} ref={(ref: any) => (cameraRef.current = ref)}
         >
           <View style={[styles.cover, contentStyle]}>
@@ -107,7 +147,7 @@ const CameraScreen = ({ navigation }: any) => {
                 />
               </View>
 
-              <Pressable onPress={takePhoto}>
+              <Pressable onPress={takePhotoAndProcess}>
                 <View style={{
                   ...styles.buttonIcon,
                 }}>
@@ -140,19 +180,6 @@ const CameraScreen = ({ navigation }: any) => {
           </View>
         </Camera>
       )}
-      {/* {photoUri ? (
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: photoUri }} style={styles.previewImage} />
-          <Button
-            title="Retake Photo"
-            onPress={() => setPhotoUri(null)}
-          />
-        </View>
-      ) : (
-        <View style={styles.bottomBar}>
-          <Button title="Take Photo" onPress={takePhoto} />
-        </View>
-      )} */}
 
     </View>
   );

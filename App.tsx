@@ -11,11 +11,23 @@ import { View } from 'react-native';
 import { fonts } from './lib/fonts';
 import LoadingScreen from './components/LoadingScreen';
 import { useFonts } from '@expo-google-fonts/poppins';
+import { Camera } from 'expo-camera';
+import HomeScreen from './screens/home';
 
 const Stack = createNativeStackNavigator();
 
 const App = () => {
   let [fontsLoaded, error] = useFonts(fonts);
+
+  React.useEffect(() => {
+    const getPerms = async () => {
+    
+      await Camera.requestCameraPermissionsAsync();
+  
+    }
+    getPerms();
+  }, [])
+  
 
   const loading = !fontsLoaded;
 
@@ -26,6 +38,7 @@ const App = () => {
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={Tabs} />
         <Stack.Screen name="Camera" component={CameraScreen} />
+        <Stack.Screen name="ResultScreen" component={HomeScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
