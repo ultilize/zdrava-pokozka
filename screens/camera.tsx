@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Image, Pressable, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, Button, StyleSheet, Image, Pressable, TouchableOpacity, useWindowDimensions, ImageBackground } from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
 
 import close from '../assets/icons/close.png';
@@ -8,131 +8,237 @@ import repeat from '../assets/icons/repeat.png';
 import { Dialog, DialogContent, DialogTitle, DialogActions } from '../components/Dialog';
 import LoadingScreen from '../components/LoadingScreen';
 
-import { decodeJpeg } from '@tensorflow/tfjs-react-native'
-import * as tensorflow from '@tensorflow/tfjs';
-import * as mobilenet from '@tensorflow-models/mobilenet';
-import * as FileSystem from 'expo-file-system';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { cropPicture } from '../helpers/image-helper';
+import { convertBase64ToTensor, getModel, startPrediction } from '../helpers/tensor-helper';
 
-const CameraScreen = ({ navigation }: any) => {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(false);
-  const [loading, setLoading] = useState<boolean>(false);
+let types = [
+  {
+    name: "Mole",
+    title: "Znamienko",
+  },
+  {
+    name: "Skin Tag",
+    title: "Výrastok",
+  },
+  {
+    name: "Hemangiom",
+    title: "Hemangiom",
+  },
+  {
+    name: "Wart",
+    title: "Bradavica",
+  },
+  {
+    name: "Scar",
+    title: "Jazva",
+  },
+]
 
-  const [type, setType] = useState(CameraType.back);
-  const cameraRef = useRef<Camera | null>(null);
-  const [photoUri, setPhotoUri] = useState<string | null>(null);
+function convertToPercentage(prediction: any) {
+  if (prediction.length === 0) {
+    return "No values provided.";
+  }
 
-  const [isCameraRunning, setIsCameraRunning] = useState<boolean>(true);
+  // Find the highest number in the array
+  const highest = Math.max(...prediction);
 
-  const { cameraStyle, contentStyle } = useFullScreenCameraStyle();
+  // Calculate the percentage based on the highest value
+  const percentage = (highest * 100).toFixed(1);
 
-  // let tflite = new Tflite();
-  // Request camera permissions
-  const getPermissions = async () => {
-    setLoading(true);
-    await Camera.requestCameraPermissionsAsync();
+  return `${percentage}%`;
+}
 
-    const { status } = await Camera.getCameraPermissionsAsync();
+const PhotoReview = ({ image, imageUri, onResetImage }: any) => {
 
-    setLoading(false);
-    if (status === 'denied') {
-      await Camera.requestCameraPermissionsAsync();
-    } else if (status === 'granted') {
-      setHasPermission(status === 'granted');
+  const [loading, setLoading] = React.useState(false);
+
+  const processImagePrediction = async (base64Image: any) => {
+    const croppedData: any = await cropPicture(base64Image, 300);
+    const model = await getModel();
+    const tensor = await convertBase64ToTensor(croppedData.base64);
+
+    const prediction = await startPrediction(model, tensor);
+
+    console.log(prediction)
+
+    const highestPrediction = prediction.indexOf(
+      Math.max.apply(null, prediction),
+    );
+
+    const predictionPercentage = convertToPercentage(prediction);
+
+    const predictionData = {
+      ...types[highestPrediction],
+      probability: predictionPercentage
     }
+    console.log(predictionData);
   };
 
-  // Toggle between front and back camera
+  const handleImagePrediction = async () => {
+
+    setLoading(true);
+
+    try {
+      await processImagePrediction(image);
+      setLoading(false);
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  if(loading) return <LoadingScreen />
+  
+  return (
+    <View style={{
+      flex: 1,
+      alignItems: 'center',
+      padding: 45,
+      flexDirection: 'column',
+      backgroundColor: '#FEECDF'
+    }}>
+
+      <View style={{
+        height: 300,
+        width: 300,
+        borderRadius: 25,
+        overflow: 'hidden',
+        backgroundColor: 'white'
+      }}>
+        <Image source={{ uri: imageUri }} alt="Image" style={{
+          flex: 1,
+          objectFit: 'cover'
+        }} />
+      </View>
+      <View style={{
+        marginTop: 25,
+      }}>
+        <Text style={{
+          fontFamily: 'Poppins_700Bold',
+          fontSize: 30,
+          color: '#564B42',
+          textAlign: 'center'
+        }}>
+          Určite chceš použiť túto fotku?
+        </Text>
+      </View>
+      <Pressable onPress={handleImagePrediction} style={{
+        padding: 12,
+        marginTop: 40,
+        alignItems: 'center',
+        backgroundColor: '#8F672C',
+        borderRadius: 15
+      }}>
+        <Text style={{
+          fontSize: 18,
+          color: 'white',
+          fontFamily: 'Poppins_700Bold'
+        }}>
+          Použiť
+        </Text>
+      </Pressable>
+
+      <Pressable onPress={onResetImage} style={{
+        padding: 12,
+        alignItems: 'center',
+        backgroundColor: 'transparent',
+        borderRadius: 15
+      }}>
+        <Text style={{
+          fontSize: 18,
+          color: 'black',
+          fontFamily: 'Poppins_500Medium'
+        }}>
+          Ešte raz
+        </Text>
+      </Pressable>
+
+    </View>
+  )
+}
+
+const CameraScreen = ({ navigation }: any) => {
+
+  const [loading, setLoading] = React.useState(true);
+  const [cameraType, setCameraType] = React.useState(CameraType.back);
+  const [photoUri, setPhotoUri] = React.useState<any>(null);
+  const [photoRaw, setPhotoRaw] = React.useState<any>(null);
+
   const toggleCameraType = () => {
-    setType(
-      type === CameraType.back
+    setCameraType(
+      cameraType === CameraType.back
         ? CameraType.front
         : CameraType.back
     );
   };
+  const cameraRef: any = useRef();
 
-  async function ImageClassification(imageUri: string) {
-    await tensorflow.ready();
-    const model = await mobilenet.load();
-  
-    const imageBase64 = await FileSystem.readAsStringAsync(imageUri, {
-      encoding: FileSystem.EncodingType.Base64
+  const { cameraStyle, contentStyle } = useFullScreenCameraStyle();
+
+  const flipImageHorizontally = async (imageUri: any) => {
+    const { width, height, uri } = await ImageManipulator.manipulateAsync(
+      imageUri,
+      [{ flip: ImageManipulator.FlipType.Horizontal }]
+    );
+    return { uri, width, height };
+  };
+
+  const resetImage = () => {
+    setPhotoRaw(null);
+    setPhotoUri(null);
+  }
+
+  const handleImageCapture = async () => {
+    const imageData = await cameraRef.current.takePictureAsync({
+      base64: true,
     });
-  
-    const imageBuffer = tensorflow.util.encodeString(imageBase64, 'base64').buffer;
-    const raw = new Uint8Array(imageBuffer);
-  
-    const imageTensor = decodeJpeg(raw);
-  
-    const classificationResult = await model.classify(imageTensor);
-    console.log(classificationResult);
-  };
 
-  // Take a photo and process it with TensorFlow Lite
-  const takePhotoAndProcess = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
-      const imageUri = photo.uri;
-
-      try {
-        await ImageClassification(imageUri);
-
-        // Navigate to the ResultScreen with the processed result
-        // navigation.navigate('ResultScreen', { predictions: outputTensor });
-      } catch (error) {
-        console.error('Error running inference with TFLite:', error);
-      }
-
-      setLoading(false);
+    if (cameraType === CameraType.front) {
+      const flippedImageData = await flipImageHorizontally(imageData.uri);
+      setPhotoUri(flippedImageData.uri);
+    } else {
+      setPhotoUri(imageData.uri);
     }
+    setPhotoRaw(imageData);
   };
+
+  const loadCamera = async () => {
+    await Camera.requestCameraPermissionsAsync();
+
+    const { status } = await Camera.getCameraPermissionsAsync();
+    if (status === 'granted') {
+      setLoading(false);
+    } else {
+      loadCamera();
+    }
+  }
 
   React.useEffect(() => {
-    getPermissions();
-  }, []);
+    loadCamera();
+    setPhotoUri(null);
+  }, [])
 
   if (loading) return <LoadingScreen />
 
   return (
     <View style={styles.container}>
 
-      {photoUri ? (
-        <View style={[styles.cover, styles.previewContainer]}>
-          <Image source={{ uri: photoUri }} style={styles.previewImage} />
-          <Button
-            title="Retake Photo"
-            onPress={() => setPhotoUri(null)}
-          />
-        </View>
+      {photoUri && photoRaw ? (
+        <PhotoReview image={photoRaw} imageUri={photoUri} onResetImage={resetImage} />
       ) : (
         <Camera
           style={[styles.cover, cameraStyle]}
-          onCameraReady={() => setIsCameraRunning(true)}
-          onMountError={() => { setIsCameraRunning(false) }}
-          type={type} ref={(ref: any) => (cameraRef.current = ref)}
+          onCameraReady={() => setLoading(false)}
+          onMountError={() => { setLoading(true), console.log('Error loading camera.') }}
+          type={cameraType} ref={cameraRef}
+          autoFocus={true}
         >
           <View style={[styles.cover, contentStyle]}>
 
-            <Pressable onPress={() => navigation.navigate('Home')} style={{
-              position: 'absolute',
-              top: 50,
-              right: 25
-            }}>
-              <View style={{
-                ...styles.buttonIcon,
-              }}>
-                <Image
-                  source={close}
-                  resizeMode='contain'
-                  style={{
-                    ...styles.buttonIcon.smallIcon,
-                    tintColor: 'white'
-                  }}
-                />
-              </View>
-            </Pressable>
 
-
-            <View style={styles.buttonContainer}>
+            <View style={[styles.buttonContainer, {
+              display: photoUri ? 'none' : 'flex',
+            }]}>
               <View style={{
                 ...styles.buttonIcon,
                 opacity: 0,
@@ -147,7 +253,7 @@ const CameraScreen = ({ navigation }: any) => {
                 />
               </View>
 
-              <Pressable onPress={takePhotoAndProcess}>
+              <Pressable onPress={() => handleImageCapture()}>
                 <View style={{
                   ...styles.buttonIcon,
                 }}>
@@ -215,10 +321,12 @@ function useFullScreenCameraStyle(ratio = 3 / 4) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 45,
+    backgroundColor: 'black',
   },
   cover: {
     position: "absolute",
-    top: 0,
+    top: 45,
     bottom: 0,
     right: 0,
     left: 0,
@@ -271,8 +379,8 @@ const styles = StyleSheet.create({
   },
   previewContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    height: '100%',
+    width: '100%',
   },
   previewImage: {
     width: '100%',

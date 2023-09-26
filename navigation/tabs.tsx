@@ -18,7 +18,7 @@ const Tabs = ({ navigation }: any) => {
         <Tab.Navigator screenOptions={({ route }) => ({
             headerShown: false,
             tabBarShowLabel: false,
-            tabBarStyle: [styles.tabContainer, styles.shadow, (route.name === 'Scanner' ? styles.tabContainer.camera : null)]
+            tabBarStyle: [styles.tabContainer, styles.shadow]
         })}>
             <Tab.Screen
                 name="Home Page"

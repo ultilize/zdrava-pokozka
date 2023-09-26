@@ -16,7 +16,7 @@ const HomeScreen = ({ navigation }: any) => {
                         ...styles.content.title,
                         textAlign: 'center'
                     }}>
-                        Skúmaj Svoje Znamieko v Čas!
+                        Skúmaj svoje znamieko včas
                     </Text>
                     <ImageBackground source={slogan} alt="Slogal" resizeMode='contain' style={{
                         ...styles.content.slogan,
@@ -24,7 +24,7 @@ const HomeScreen = ({ navigation }: any) => {
                     }}>
                         <Text style={styles.content.slogan.text}>Odfoť</Text>
                         <Text style={styles.content.slogan.text}>Označ</Text>
-                        <Text style={styles.content.slogan.text}>Zisťuj!</Text>
+                        <Text style={styles.content.slogan.text}>Zisťuj</Text>
                     </ImageBackground>
                 </View>
                 <Image
