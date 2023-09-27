@@ -6,6 +6,7 @@ import CameraScreen from './screens/camera';
 import Tabs from './navigation/tabs';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Font from 'expo-font';
+import Toast from 'react-native-toast-message';
 
 import { View } from 'react-native';
 import { fonts } from './lib/fonts';
@@ -40,6 +41,7 @@ const App = () => {
         <Stack.Screen name="Camera" component={CameraScreen} />
         <Stack.Screen name="ResultScreen" component={HomeScreen} />
       </Stack.Navigator>
+      <Toast />
     </NavigationContainer>
   );
 };

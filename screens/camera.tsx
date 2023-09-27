@@ -11,6 +11,10 @@ import LoadingScreen from '../components/LoadingScreen';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { cropPicture } from '../helpers/image-helper';
 import { convertBase64ToTensor, getModel, startPrediction } from '../helpers/tensor-helper';
+import { ToastAndroid } from 'react-native';
+
+import lens from '../assets/icons/lensaa.png';
+import Toast from 'react-native-toast-message';
 
 let types = [
   {
@@ -49,7 +53,7 @@ function convertToPercentage(prediction: any) {
   return `${percentage}%`;
 }
 
-const PhotoReview = ({ image, imageUri, onResetImage }: any) => {
+const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
 
   const [loading, setLoading] = React.useState(false);
 
@@ -87,73 +91,45 @@ const PhotoReview = ({ image, imageUri, onResetImage }: any) => {
     }
   }
 
-  if(loading) return <LoadingScreen />
-  
+  React.useEffect(() => {
+    if (image && imageUri) {
+      Toast.show({
+        type: 'info',
+        position: 'bottom',
+        text1: 'Ulož čo najbližšie do štvorca, vzdialenosť môže ovplyvniť správny výsledok.',
+        visibilityTime: 4000,
+      });
+    }
+  }, [])
+
+  if (loading) return <LoadingScreen />
+
   return (
-    <View style={{
-      flex: 1,
-      alignItems: 'center',
-      padding: 45,
-      flexDirection: 'column',
-      backgroundColor: '#FEECDF'
-    }}>
-
-      <View style={{
-        height: 300,
-        width: 300,
-        borderRadius: 25,
-        overflow: 'hidden',
-        backgroundColor: 'white'
-      }}>
-        <Image source={{ uri: imageUri }} alt="Image" style={{
-          flex: 1,
-          objectFit: 'cover'
-        }} />
+    <ImageBackground source={{ uri: imageUri }} style={styles.imageBackground}>
+      <Image source={lens} alt="" style={{
+        position: 'absolute',
+        width: '100%',
+        height: '100%'
+      }}/>
+      <View style={styles.container}>
+        {/* <Image source={lens} style={styles.lensImage} /> */}
+        <View style={styles.textContainer}>
+          <Text style={styles.text}>
+            Určite chceš použiť túto fotku?
+          </Text>
+        </View>
+        <Pressable onPress={handleImagePrediction} style={styles.previewButton}>
+          <Text style={styles.previewButton.text}>
+            Použiť
+          </Text>
+        </Pressable>
+        <Pressable onPress={onResetImage} style={styles.resetButton}>
+          <Text style={styles.resetButton.text}>
+            Ešte raz
+          </Text>
+        </Pressable>
       </View>
-      <View style={{
-        marginTop: 25,
-      }}>
-        <Text style={{
-          fontFamily: 'Poppins_700Bold',
-          fontSize: 30,
-          color: '#564B42',
-          textAlign: 'center'
-        }}>
-          Určite chceš použiť túto fotku?
-        </Text>
-      </View>
-      <Pressable onPress={handleImagePrediction} style={{
-        padding: 12,
-        marginTop: 40,
-        alignItems: 'center',
-        backgroundColor: '#8F672C',
-        borderRadius: 15
-      }}>
-        <Text style={{
-          fontSize: 18,
-          color: 'white',
-          fontFamily: 'Poppins_700Bold'
-        }}>
-          Použiť
-        </Text>
-      </Pressable>
-
-      <Pressable onPress={onResetImage} style={{
-        padding: 12,
-        alignItems: 'center',
-        backgroundColor: 'transparent',
-        borderRadius: 15
-      }}>
-        <Text style={{
-          fontSize: 18,
-          color: 'black',
-          fontFamily: 'Poppins_500Medium'
-        }}>
-          Ešte raz
-        </Text>
-      </Pressable>
-
-    </View>
+    </ImageBackground>
   )
 }
 
@@ -200,6 +176,7 @@ const CameraScreen = ({ navigation }: any) => {
       setPhotoUri(imageData.uri);
     }
     setPhotoRaw(imageData);
+
   };
 
   const loadCamera = async () => {
@@ -215,7 +192,13 @@ const CameraScreen = ({ navigation }: any) => {
 
   React.useEffect(() => {
     loadCamera();
-    setPhotoUri(null);
+    // setPhotoUri(null);
+    Toast.show({
+      type: 'info',
+      position: 'bottom',
+      text1: 'Doporučujeme sfotiť čo najbližšie pri obrazovke.',
+      visibilityTime: 4000,
+    });
   }, [])
 
   if (loading) return <LoadingScreen />
@@ -224,7 +207,7 @@ const CameraScreen = ({ navigation }: any) => {
     <View style={styles.container}>
 
       {photoUri && photoRaw ? (
-        <PhotoReview image={photoRaw} imageUri={photoUri} onResetImage={resetImage} />
+        <PhotoReview image={photoRaw} imageUri={photoUri} onResetImage={resetImage} navigation={navigation} />
       ) : (
         <Camera
           style={[styles.cover, cameraStyle]}
@@ -322,7 +305,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 45,
-    backgroundColor: 'black',
+    alignItems: 'center',
+    flexDirection: 'column',
+  },
+  imageBackground: {
+    flex: 1,
+    height: '100%',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)', // Dark overlay
+  },
+  lensImage: {
+    height: 300,
+    width: 300,
+    borderRadius: 25,
+    overflow: 'hidden',
+  },
+  textContainer: {
+    marginTop: 25,
+  },
+  text: {
+    fontFamily: 'Poppins_700Bold',
+    fontSize: 26,
+    color: 'white',
+    textAlign: 'center',
+  },
+  previewButton: {
+    padding: 8,
+    width: 100,
+    marginTop: 40,
+    alignItems: 'center',
+    backgroundColor: '#8F672C',
+    borderRadius: 15,
+    text: {
+      fontSize: 18,
+      color: 'white',
+      fontFamily: 'Poppins_600SemiBold',
+    }
+  },
+  resetButton: {
+    padding: 8,
+    width: 100,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+    borderRadius: 15,
+    text: {
+      fontSize: 15,
+      color: 'white',
+      fontFamily: 'Poppins_500Medium',
+    }
   },
   cover: {
     position: "absolute",
