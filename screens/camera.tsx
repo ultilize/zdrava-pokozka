@@ -1,41 +1,60 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, Button, StyleSheet, Image, Pressable, TouchableOpacity, useWindowDimensions, ImageBackground } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, StyleSheet, Image, Pressable, useWindowDimensions, ImageBackground } from 'react-native';
 import { Camera, CameraType } from 'expo-camera';
 
 import close from '../assets/icons/close.png';
 import circle from '../assets/icons/circle.png';
 import repeat from '../assets/icons/repeat.png';
-import { Dialog, DialogContent, DialogTitle, DialogActions } from '../components/Dialog';
 import LoadingScreen from '../components/LoadingScreen';
 
 import * as ImageManipulator from 'expo-image-manipulator';
 import { cropPicture } from '../helpers/image-helper';
 import { convertBase64ToTensor, getModel, startPrediction } from '../helpers/tensor-helper';
-import { ToastAndroid } from 'react-native';
 
 import lens from '../assets/icons/lensaa.png';
 import Toast from 'react-native-toast-message';
 
+import scarImg from '../assets/types/scar.jpg';
+import hemangiomImg from '../assets/types/hemangiom.jpg';
+import skintagImg from '../assets/types/skintag.jpg';
+import birthmarkImg from '../assets/types/birthmark.jpg';
+import wartImg from '../assets/types/wart.jpg';
+
 let types = [
   {
-    name: "Mole",
+    name: "Birthmark",
     title: "Znamienko",
+    image: birthmarkImg.takePictureAsync({
+      base64: true,
+    }).src
   },
   {
     name: "Skin Tag",
     title: "Výrastok",
+    image: skintagImg.takePictureAsync({
+      base64: true,
+    }).src
   },
   {
     name: "Hemangiom",
     title: "Hemangiom",
+    image: hemangiomImg.takePictureAsync({
+      base64: true,
+    }).src
   },
   {
     name: "Wart",
-    title: "Bradavica",
+    title: "Bradavicu",
+    image: wartImg.takePictureAsync({
+      base64: true,
+    }).src
   },
   {
     name: "Scar",
-    title: "Jazva",
+    title: "Jazvu",
+    image: scarImg.takePictureAsync({
+      base64: true,
+    }).src
   },
 ]
 
@@ -74,9 +93,12 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
 
     const predictionData = {
       ...types[highestPrediction],
-      probability: predictionPercentage
+      probability: predictionPercentage,
+      original: imageUri
     }
-    console.log(predictionData);
+
+    navigation.navigate('Prediction', { predictionData });
+    setLoading(false);
   };
 
   const handleImagePrediction = async () => {
@@ -85,7 +107,6 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
 
     try {
       await processImagePrediction(image);
-      setLoading(false);
     } catch (err) {
       console.log(err);
     }
@@ -96,7 +117,7 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
       Toast.show({
         type: 'info',
         position: 'bottom',
-        text1: 'Ulož čo najbližšie do štvorca, vzdialenosť môže ovplyvniť správny výsledok.',
+        text1: 'Vzdialenosť obrázku môže ovplyvniť správny výsledok.',
         visibilityTime: 4000,
       });
     }
@@ -110,9 +131,11 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
         position: 'absolute',
         width: '100%',
         height: '100%'
-      }}/>
-      <View style={styles.container}>
-        {/* <Image source={lens} style={styles.lensImage} /> */}
+      }} />
+      <View style={[styles.container, {
+        justifyContent: 'flex-end',
+        marginBottom: 65,
+      }]}>
         <View style={styles.textContainer}>
           <Text style={styles.text}>
             Určite chceš použiť túto fotku?
@@ -192,7 +215,7 @@ const CameraScreen = ({ navigation }: any) => {
 
   React.useEffect(() => {
     loadCamera();
-    // setPhotoUri(null);
+    resetImage();
     Toast.show({
       type: 'info',
       position: 'bottom',
@@ -222,19 +245,21 @@ const CameraScreen = ({ navigation }: any) => {
             <View style={[styles.buttonContainer, {
               display: photoUri ? 'none' : 'flex',
             }]}>
-              <View style={{
-                ...styles.buttonIcon,
-                opacity: 0,
-              }}>
-                <Image
-                  source={repeat}
-                  resizeMode='contain'
-                  style={{
-                    ...styles.buttonIcon.icon,
-                    tintColor: 'white'
-                  }}
-                />
-              </View>
+              <Pressable onPress={() => navigation.navigate('Home')}>
+                <View style={{
+                  ...styles.buttonIcon,
+                }}>
+                  <Image
+                    source={close}
+                    resizeMode='contain'
+                    style={{
+                      ...styles.buttonIcon.icon,
+                      height: 25,
+                      tintColor: 'white'
+                    }}
+                  />
+                </View>
+              </Pressable>
 
               <Pressable onPress={() => handleImageCapture()}>
                 <View style={{
@@ -268,9 +293,10 @@ const CameraScreen = ({ navigation }: any) => {
             </View>
           </View>
         </Camera>
-      )}
+      )
+      }
 
-    </View>
+    </View >
   );
 };
 
