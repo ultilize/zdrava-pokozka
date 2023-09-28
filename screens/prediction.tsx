@@ -1,9 +1,9 @@
 import React from 'react'
-import { View, Text, Image } from 'react-native';
+import { View, Text, Image, Pressable } from 'react-native';
 
 const PredictionScreen = ({ navigation, route }: any) => {
     const { predictionData } = route.params;
-    console.log(predictionData)
+
     return (
         <View style={{
             flex: 1,
@@ -59,12 +59,49 @@ const PredictionScreen = ({ navigation, route }: any) => {
                     overflow: 'hidden',
                     borderRadius: 15,
                 }}>
-                    <Image source={{ uri: predictionData?.image }} alt="photo" style={{
+                    <Image source={predictionData.typeImage} alt="photo" style={{
                         height: '100%',
                         width: '100%'
                     }} />
                 </View>
 
+            </View>
+            <View style={{
+                marginVertical: 30,
+                display: 'flex',
+                flexDirection: 'row',
+                gap: 8
+            }}>
+
+                <Text style={{
+                    fontFamily: 'Poppins_500Medium',
+                    color: '#564B42',
+                    fontSize: 25
+                }}>
+                    Istota:
+                </Text>
+                <Text style={{
+                    fontFamily: 'Poppins_700Bold',
+                    color: '#564B42',
+                    fontSize: 25
+                }}>
+                    {predictionData.probability}
+                </Text>
+
+            </View>
+            <View>
+                <Pressable onPress={() => navigation.navigate('Home')} style={{
+                    padding: 10,
+                    borderRadius: 15,
+                    backgroundColor: '#564B42'
+                }}>
+                    <Text style={{
+                        color: 'white',
+                        fontFamily: 'Poppins_600SemiBold',
+                    }}>
+                        Dobre!
+                    </Text>
+                </Pressable>
             </View>
         </View>
     )

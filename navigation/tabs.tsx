@@ -1,14 +1,14 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/home';
 import CameraScreen from '../screens/camera';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import camera from '../assets/icons/camera.png';
-import user from '../assets/icons/user.png';
+import gallery from '../assets/icons/image-gallery.png';
 import home from '../assets/icons/home.png';
-import ProfileScreen from '../screens/profile';
 import * as React from 'react';
 import { Pressable } from 'react-native';
+import GalleryScreen from '../screens/gallery';
 
 const Tab = createBottomTabNavigator();
 
@@ -51,34 +51,36 @@ const Tabs = ({ navigation }: any) => {
                 name="Scanner"
                 component={HomeScreen}
                 options={{
-                    tabBarIcon: ({ focused }) => (
-                        <Pressable onPress={() => navigation.navigate('Camera')}>
-                            <View style={{
-                                ...styles.tabIcon,
-                                borderBottomWidth: focused ? 1 : 0,
-                            }}>
-                                <Image
-                                    source={camera}
-                                    resizeMode='contain'
-                                    style={{
-                                        ...styles.tabIcon.icon,
-                                        tintColor: focused ? '#FEFFB8' : '#fff'
-                                    }}
-                                />
-                                <Text style={{
-                                    ...styles.tabIcon.text,
-                                    color: focused ? '#FEFFB8' : '#fff'
-                                }}>
-                                    Skener
-                                </Text>
-                            </View>
-                        </Pressable>
-                    )
-                }}
+                    tabBarButton: (props) => (
+                      <Pressable
+                        onPress={() => navigation.navigate('Camera')}
+                        style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
+                      >
+                        <View style={{
+                          ...styles.tabIcon,
+                        }}>
+                          <Image
+                            source={camera}
+                            resizeMode='contain'
+                            style={{
+                              ...styles.tabIcon.icon,
+                              tintColor: '#fff'
+                            }}
+                          />
+                          <Text style={{
+                            ...styles.tabIcon.text,
+                            color: '#fff'
+                          }}>
+                            Skener
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ),
+                  }}
             />
             <Tab.Screen
-                name="My Account"
-                component={ProfileScreen}
+                name="Gallery"
+                component={GalleryScreen}
                 options={{
                     tabBarIcon: ({ focused }) => (
                         <View style={{
@@ -86,7 +88,7 @@ const Tabs = ({ navigation }: any) => {
                             borderBottomWidth: focused ? 1 : 0,
                         }}>
                             <Image
-                                source={user}
+                                source={gallery}
                                 resizeMode='contain'
                                 style={{
                                     ...styles.tabIcon.icon,
@@ -97,7 +99,7 @@ const Tabs = ({ navigation }: any) => {
                                 ...styles.tabIcon.text,
                                 color: focused ? '#FEFFB8' : '#fff'
                             }}>
-                                Profil
+                                Galéria
                             </Text>
                         </View>
                     )

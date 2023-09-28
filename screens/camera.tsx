@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, useWindowDimensions, ImageBackground } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
+import { Camera, CameraType, FlashMode } from 'expo-camera';
 
 import close from '../assets/icons/close.png';
 import circle from '../assets/icons/circle.png';
@@ -8,10 +8,13 @@ import repeat from '../assets/icons/repeat.png';
 import LoadingScreen from '../components/LoadingScreen';
 
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as FileSystem from 'expo-file-system';
 import { cropPicture } from '../helpers/image-helper';
 import { convertBase64ToTensor, getModel, startPrediction } from '../helpers/tensor-helper';
 
-import lens from '../assets/icons/lensaa.png';
+import lens from '../assets/icons/lens.png';
+import flashOn from '../assets/icons/flash-on.png';
+import flashOff from '../assets/icons/flash-off.png';
 import Toast from 'react-native-toast-message';
 
 import scarImg from '../assets/types/scar.jpg';
@@ -24,37 +27,27 @@ let types = [
   {
     name: "Birthmark",
     title: "Znamienko",
-    image: birthmarkImg.takePictureAsync({
-      base64: true,
-    }).src
+    image: birthmarkImg,
   },
   {
     name: "Skin Tag",
     title: "Výrastok",
-    image: skintagImg.takePictureAsync({
-      base64: true,
-    }).src
+    image: skintagImg,
   },
   {
     name: "Hemangiom",
     title: "Hemangiom",
-    image: hemangiomImg.takePictureAsync({
-      base64: true,
-    }).src
+    image: hemangiomImg,
   },
   {
     name: "Wart",
     title: "Bradavicu",
-    image: wartImg.takePictureAsync({
-      base64: true,
-    }).src
+    image: wartImg,
   },
   {
     name: "Scar",
     title: "Jazvu",
-    image: scarImg.takePictureAsync({
-      base64: true,
-    }).src
+    image: scarImg,
   },
 ]
 
@@ -67,9 +60,18 @@ function convertToPercentage(prediction: any) {
   const highest = Math.max(...prediction);
 
   // Calculate the percentage based on the highest value
-  const percentage = (highest * 100).toFixed(1);
+  const percentage = (highest * 100).toFixed(0);
 
   return `${percentage}%`;
+}
+
+const directory = `${FileSystem.documentDirectory}images/`;
+
+const ensureDirExists = async () => {
+  const dirInfo = await FileSystem.getInfoAsync(directory)
+  if (!dirInfo.exists) {
+    await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+  }
 }
 
 const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
@@ -83,8 +85,6 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
 
     const prediction = await startPrediction(model, tensor);
 
-    console.log(prediction)
-
     const highestPrediction = prediction.indexOf(
       Math.max.apply(null, prediction),
     );
@@ -94,7 +94,8 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
     const predictionData = {
       ...types[highestPrediction],
       probability: predictionPercentage,
-      original: imageUri
+      original: imageUri,
+      typeImage: types[highestPrediction].image,
     }
 
     navigation.navigate('Prediction', { predictionData });
@@ -106,6 +107,16 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
     setLoading(true);
 
     try {
+      await ensureDirExists();
+      // Generate a unique filename (you can use a timestamp or other unique identifier)
+      const fileName = `${Date.now()}.jpg`;
+
+      // Build the full path to save the image
+      const filePath = `${directory}${fileName}`;
+
+      // Save the plain Base64-encoded image to local storage
+      await FileSystem.copyAsync({ from: imageUri, to: filePath });
+
       await processImagePrediction(image);
     } catch (err) {
       console.log(err);
@@ -160,6 +171,7 @@ const CameraScreen = ({ navigation }: any) => {
 
   const [loading, setLoading] = React.useState(true);
   const [cameraType, setCameraType] = React.useState(CameraType.back);
+  const [flashMode, setFlashMode] = React.useState(FlashMode.off);
   const [photoUri, setPhotoUri] = React.useState<any>(null);
   const [photoRaw, setPhotoRaw] = React.useState<any>(null);
 
@@ -170,6 +182,15 @@ const CameraScreen = ({ navigation }: any) => {
         : CameraType.back
     );
   };
+
+  const toggleFlashMode = () => {
+    setFlashMode(
+      flashMode === FlashMode.off
+        ? FlashMode.on
+        : FlashMode.off
+    );
+  };
+
   const cameraRef: any = useRef();
 
   const { cameraStyle, contentStyle } = useFullScreenCameraStyle();
@@ -188,6 +209,16 @@ const CameraScreen = ({ navigation }: any) => {
   }
 
   const handleImageCapture = async () => {
+    if (!cameraRef) {
+      Toast.show({
+        type: 'info',
+        position: 'bottom',
+        text1: 'Kamera sa nezapla, skús reštartovať appku.',
+        visibilityTime: 4000,
+      });
+      return;
+    }
+
     const imageData = await cameraRef.current.takePictureAsync({
       base64: true,
     });
@@ -238,9 +269,29 @@ const CameraScreen = ({ navigation }: any) => {
           onMountError={() => { setLoading(true), console.log('Error loading camera.') }}
           type={cameraType} ref={cameraRef}
           autoFocus={true}
+          flashMode={flashMode}
         >
           <View style={[styles.cover, contentStyle]}>
 
+            <Pressable onPress={toggleFlashMode} style={{
+              position: 'absolute',
+              top: -25,
+              right: 0
+            }}>
+              <View style={{
+                ...styles.buttonIcon,
+              }}>
+                <Image
+                  source={flashMode === FlashMode.on ? flashOn : flashOff}
+                  resizeMode='contain'
+                  style={{
+                    ...styles.buttonIcon.icon,
+                    height: 20,
+                    tintColor: 'white'
+                  }}
+                />
+              </View>
+            </Pressable>
 
             <View style={[styles.buttonContainer, {
               display: photoUri ? 'none' : 'flex',
@@ -330,7 +381,6 @@ function useFullScreenCameraStyle(ratio = 3 / 4) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 45,
     alignItems: 'center',
     flexDirection: 'column',
   },
@@ -387,7 +437,7 @@ const styles = StyleSheet.create({
   },
   cover: {
     position: "absolute",
-    top: 45,
+    top: 40,
     bottom: 0,
     right: 0,
     left: 0,

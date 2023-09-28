@@ -36,11 +36,7 @@ const App = () => {
       <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Home" component={Tabs} />
         <Stack.Screen name="Camera" component={CameraScreen} />
-        <Stack.Screen options={{
-          headerShown: true,
-          headerTitle: 'Späť',
-          
-        }} name="Prediction" component={PredictionScreen} />
+        <Stack.Screen name="Prediction" component={PredictionScreen} />
       </Stack.Navigator>
       <Toast />
     </NavigationContainer>
