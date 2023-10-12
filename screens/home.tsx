@@ -4,8 +4,6 @@ import background from '../assets/backgrounds/homepage.png';
 
 import slogan from '../assets/arrows.png';
 
-// ts ingore
-
 const HomeScreen = ({ navigation }: any) => {
     return (
         <>
