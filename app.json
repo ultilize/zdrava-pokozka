@@ -20,6 +20,7 @@
       "bundleIdentifier": "com.fiuipko.zdravapokozka"
     },
     "android": {
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.png",
         "backgroundColor": "#FFCFAC"

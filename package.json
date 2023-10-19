@@ -37,7 +37,7 @@
     "fix": "^0.0.6",
     "maven": "^5.0.0",
     "react": "18.2.0",
-    "react-native": "0.72.5",
+    "react-native": "0.72.6",
     "react-native-fs": "^2.20.0",
     "react-native-gesture-handler": "~2.12.0",
     "react-native-image-gallery": "^2.1.5",

@@ -28,28 +28,59 @@ let types = [
     name: "Birthmark",
     title: "Znamienko",
     image: birthmarkImg,
+    info: [
+      "Znamienka sú obvykle neškodné a vznikajú pri narodení alebo krátko po ňom.",
+      "Môžu mať rôzne farby, tvary a veľkosti.",
+      "Niektoré znamienka môžu s časom meniť svoj vzhľad."
+    ],
+    severity: "Prehliadka nie je potrebná, ale zmeny v tvare, farbe alebo veľkosti by mali byť sledované."
   },
   {
     name: "Skin Tag",
     title: "Výrastok",
     image: skintagImg,
+    info: [
+      "Výrastky na koži sú malé, mäkké výrastky kože, ktoré sú zvyčajne neškodné.",
+      "Zvyčajne sa objavujú na krku, v podpazuší, stehnách a v oblastiach trenia.",
+      "Môžu byť odstránené z estetických dôvodov alebo ak spôsobujú nepohodlie."
+    ],
+    severity: "Návšteva lekára nie je nutná, pokiaľ nespôsobujú nepohodlie alebo estetické problémy."
   },
   {
     name: "Hemangiom",
-    title: "Hemangiom",
+    title: "Hemangióm",
     image: hemangiomImg,
+    info: [
+      "Hemangiomy sú neškodné nádory, ktoré často vznikajú krátko po narodení.",
+      "Zvyčajne sa vyvíjajú na koži, ale môžu sa objaviť aj v orgánoch.",
+      "Väčšina hemangiómov sama ustúpi do 10 rokov veku."
+    ],
+    severity: "Odporúča sa konzultácia s lekárom na hodnotenie a sledovanie."
   },
   {
     name: "Wart",
-    title: "Bradavicu",
+    title: "Bradavica",
     image: wartImg,
+    info: [
+      "Bradavice sú malé výrastky spôsobené ľudským papilomavírusom (HPV).",
+      "Sú zvyčajne neškodné a môžu sa vyskytovať na rôznych častiach tela.",
+      "Existujú rôzne metódy odstránenia bradavíc, vrátane kryoterapie a liečivých krémov."
+    ],
+    severity: "Návšteva lekára nie je nutná, pokiaľ nezpôsobujú bolesť alebo estetické problémy."
   },
   {
     name: "Scar",
-    title: "Jazvu",
+    title: "Jazva",
     image: scarImg,
-  },
-]
+    info: [
+      "Jazvy sú časti fibrotického tkaniva, ktoré vznikajú počas hojenia kože po zranení.",
+      "Existujú rôzne typy jaziev v závislosti od zranenia alebo ochorenia kože.",
+      "Niektoré jazvy môžu byť liečené krémami, gélmia alebo chirurgickými zákrokmi na zlepšenie vzhľadu."
+    ],
+    severity: "Návšteva lekára nie je nutná, pokiaľ jazvy nespôsobujú fyzické alebo estetické problémy."
+  }
+];
+
 
 function convertToPercentage(prediction: any) {
   if (prediction.length === 0) {
@@ -68,9 +99,13 @@ function convertToPercentage(prediction: any) {
 const directory = `${FileSystem.documentDirectory}images/`;
 
 const ensureDirExists = async () => {
-  const dirInfo = await FileSystem.getInfoAsync(directory)
-  if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+  try {
+    const dirInfo = await FileSystem.getInfoAsync(directory)
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(directory, { intermediates: true });
+    }
+  } catch (err) {
+    console.error(err);
   }
 }
 
@@ -79,27 +114,34 @@ const PhotoReview = ({ image, imageUri, onResetImage, navigation }: any) => {
   const [loading, setLoading] = React.useState(false);
 
   const processImagePrediction = async (base64Image: any) => {
-    const croppedData: any = await cropPicture(base64Image, 300);
-    const model = await getModel();
-    const tensor = await convertBase64ToTensor(croppedData.base64);
 
-    const prediction = await startPrediction(model, tensor);
+    try {
 
-    const highestPrediction = prediction.indexOf(
-      Math.max.apply(null, prediction),
-    );
+      const croppedData: any = await cropPicture(base64Image, 300);
+      const model = await getModel();
+      const tensor = await convertBase64ToTensor(croppedData.base64);
 
-    const predictionPercentage = convertToPercentage(prediction);
+      const prediction = await startPrediction(model, tensor);
 
-    const predictionData = {
-      ...types[highestPrediction],
-      probability: predictionPercentage,
-      original: imageUri,
-      typeImage: types[highestPrediction].image,
+      const highestPrediction = prediction.indexOf(
+        Math.max.apply(null, prediction),
+      );
+
+      const predictionPercentage = convertToPercentage(prediction);
+
+      const predictionData = {
+        ...types[highestPrediction],
+        probability: predictionPercentage,
+        original: imageUri,
+        typeImage: types[highestPrediction].image,
+      }
+
+      navigation.navigate('Prediction', { predictionData });
+      setLoading(false);
+
+    } catch (err) {
+      console.error(err);
     }
-
-    navigation.navigate('Prediction', { predictionData });
-    setLoading(false);
   };
 
   const handleImagePrediction = async () => {
@@ -196,11 +238,15 @@ const CameraScreen = ({ navigation }: any) => {
   const { cameraStyle, contentStyle } = useFullScreenCameraStyle();
 
   const flipImageHorizontally = async (imageUri: any) => {
-    const { width, height, uri } = await ImageManipulator.manipulateAsync(
-      imageUri,
-      [{ flip: ImageManipulator.FlipType.Horizontal }]
-    );
-    return { uri, width, height };
+    try {
+      const { width, height, uri } = await ImageManipulator.manipulateAsync(
+        imageUri,
+        [{ flip: ImageManipulator.FlipType.Horizontal }]
+      );
+      return { uri, width, height };
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const resetImage = () => {
@@ -219,29 +265,42 @@ const CameraScreen = ({ navigation }: any) => {
       return;
     }
 
-    const imageData = await cameraRef.current.takePictureAsync({
-      base64: true,
-    });
+    try {
 
-    if (cameraType === CameraType.front) {
-      const flippedImageData = await flipImageHorizontally(imageData.uri);
-      setPhotoUri(flippedImageData.uri);
-    } else {
-      setPhotoUri(imageData.uri);
+      const imageData = await cameraRef.current.takePictureAsync({
+        base64: true,
+      });
+
+      if (cameraType === CameraType.front) {
+        const flippedImageData: any = await flipImageHorizontally(imageData.uri);
+        setPhotoUri(flippedImageData.uri);
+      } else {
+        setPhotoUri(imageData.uri);
+      }
+      setPhotoRaw(imageData);
+
+    } catch (err) {
+      console.error(err);
     }
-    setPhotoRaw(imageData);
 
   };
 
   const loadCamera = async () => {
-    await Camera.requestCameraPermissionsAsync();
 
-    const { status } = await Camera.getCameraPermissionsAsync();
-    if (status === 'granted') {
-      setLoading(false);
-    } else {
-      loadCamera();
+    try {
+      await Camera.requestCameraPermissionsAsync();
+
+      const { status } = await Camera.getCameraPermissionsAsync();
+      if (status === 'granted') {
+        setLoading(false);
+      } else {
+        loadCamera();
+      }
+
+    } catch (err) {
+      console.error(err);
     }
+
   }
 
   React.useEffect(() => {
