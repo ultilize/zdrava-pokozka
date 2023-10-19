@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ImageBackground, Image, TouchableOpacity, Pressable } from 'react-native';
+import { View, ImageBackground, Image, TouchableOpacity, Pressable, Touchable } from 'react-native';
 import ImageViewer from 'react-native-image-zoom-viewer';
 import Modal from 'react-native-modal';
 import * as FileSystem from 'expo-file-system';
@@ -60,21 +60,24 @@ const GalleryScreen = ({ navigation }: any) => {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#FEECDF', padding: 20, paddingVertical: 43 }}>
+    <View style={{ flex: 1, backgroundColor: '#FEECDF', padding: 20, paddingVertical: 43, alignItems: 'center', display: 'flex' }}>
       <View style={{
         width: '100%',
         display: 'flex',
         flexDirection: 'row',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 40
+        justifyContent: 'space-between'
       }}>
-        <Pressable onPress={resetGallery}>
+        <TouchableOpacity onPress={() => {resetGallery; console.log("reset")}} style={{
+          marginLeft: 15,
+          margin: 0,
+          padding: 0,
+        }}>
           <View style={{
             alignItems: 'center',
             justifyContent: 'center',
             borderColor: '#FEFFB8',
-            width: 40
+            height: 50,
+            width: 50
           }}>
             <Image
               source={broom}
@@ -85,8 +88,11 @@ const GalleryScreen = ({ navigation }: any) => {
               }}
             />
           </View>
-        </Pressable>
-        <Pressable onPress={reloadGallery}>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => {reloadGallery(); console.log("reload")}} style={{
+          marginRight: 15,
+          padding: 0,
+        }}>
           <View style={{
             alignItems: 'center',
             justifyContent: 'center',
@@ -102,7 +108,7 @@ const GalleryScreen = ({ navigation }: any) => {
               }}
             />
           </View>
-        </Pressable>
+        </TouchableOpacity>
       </View>
       <FlatList
         data={imageURIs}

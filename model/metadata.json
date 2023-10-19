@@ -1,1 +1,1 @@
-{"tfjsVersion":"1.3.1","tmVersion":"2.4.7","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2023-09-27T06:19:20.465Z","userMetadata":{},"modelName":"Kozny model","labels":["Birthmark","Skin Tags","Hemangiom","Wart","Scar"],"imageSize":224}
+{"tfjsVersion":"1.3.1","tmVersion":"2.4.7","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2023-10-19T22:27:43.178Z","userMetadata":{},"modelName":"tm-my-image-model","labels":["Birthmark","Skin Tags","Hemangiom","Wart","Scar"],"imageSize":224}
